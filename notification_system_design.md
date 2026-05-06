@@ -1,6 +1,3 @@
-
-
-````markdown id="2x4yvu"
 # Notification System Design
 
 ## Affordmed Campus Hiring Evaluation
