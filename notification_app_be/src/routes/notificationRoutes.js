@@ -5,8 +5,7 @@ const router = express.Router();
 
 const Log = require("../../../logging_middleware/logger");
 
-const ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJNYXBDbGFpbXMiOnsiYXVkIjoiaHR0cDovLzIwLjI0NC41Ni4xNDQvZXZhbHVhdGlvbi1zZXJ2aWNlIiwiZW1haWwiOiJhbS5haS51NGFpZDIzMDU2QGFtLnN0dWRlbnRzLmFtcml0YS5lZHUiLCJleHAiOjE3NzgwNjMxNzcsImlhdCI6MTc3ODA2MjI3NywiaXNzIjoiQWZmb3JkIE1lZGljYWwgVGVjaG5vbG9naWVzIFByaXZhdGUgTGltaXRlZCIsImp0aSI6ImY3MTU3ZjUzLWUwN2EtNGNlYy04N2JlLTQyMTUwMzNlNDAwNyIsImxvY2FsZSI6ImVuLUlOIiwibmFtZSI6InNhbmRoaXlhIGtlbm5lZHkiLCJzdWIiOiI2YTY5NmE0Ni1mZDRiLTQ3MmMtODVhOC1mYTY5ODMxMTk1ZGYifSwiZW1haWwiOiJhbS5haS51NGFpZDIzMDU2QGFtLnN0dWRlbnRzLmFtcml0YS5lZHUiLCJuYW1lIjoic2FuZGhpeWEga2VubmVkeSIsInJvbGxObyI6ImFtLmFpLnU0YWlkMjMwNTYiLCJhY2Nlc3NDb2RlIjoiUFRCTW1RIiwiY2xpZW50SUQiOiI2YTY5NmE0Ni1mZDRiLTQ3MmMtODVhOC1mYTY5ODMxMTk1ZGYiLCJjbGllbnRTZWNyZXQiOiJ0bm50ZkZxdFpFR1lwbVNLIn0.NpkVBvWd9yD6QHCY22N1OZfrtURNKFW30TQQG_2WWkI";
-
+const ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJNYXBDbGFpbXMiOnsiYXVkIjoiaHR0cDovLzIwLjI0NC41Ni4xNDQvZXZhbHVhdGlvbi1zZXJ2aWNlIiwiZW1haWwiOiJhbS5haS51NGFpZDIzMDU2QGFtLnN0dWRlbnRzLmFtcml0YS5lZHUiLCJleHAiOjE3NzgwNjQ5MDUsImlhdCI6MTc3ODA2NDAwNSwiaXNzIjoiQWZmb3JkIE1lZGljYWwgVGVjaG5vbG9naWVzIFByaXZhdGUgTGltaXRlZCIsImp0aSI6IjI2NGYwMGFmLTBhMTAtNGFhNC04NmQ3LTFmNzdjNDdiYWJhNSIsImxvY2FsZSI6ImVuLUlOIiwibmFtZSI6InNhbmRoaXlhIGtlbm5lZHkiLCJzdWIiOiI2YTY5NmE0Ni1mZDRiLTQ3MmMtODVhOC1mYTY5ODMxMTk1ZGYifSwiZW1haWwiOiJhbS5haS51NGFpZDIzMDU2QGFtLnN0dWRlbnRzLmFtcml0YS5lZHUiLCJuYW1lIjoic2FuZGhpeWEga2VubmVkeSIsInJvbGxObyI6ImFtLmFpLnU0YWlkMjMwNTYiLCJhY2Nlc3NDb2RlIjoiUFRCTW1RIiwiY2xpZW50SUQiOiI2YTY5NmE0Ni1mZDRiLTQ3MmMtODVhOC1mYTY5ODMxMTk1ZGYiLCJjbGllbnRTZWNyZXQiOiJ0bm50ZkZxdFpFR1lwbVNLIn0.5Doaw5q79yZ2dG1DW1DAVfPYN1_o7aaATqzcArfCKUQ";
 router.get("/notifications", async (req, res) => {
   try {
 
@@ -17,6 +16,7 @@ router.get("/notifications", async (req, res) => {
       {
         headers: {
           Authorization: `Bearer ${ACCESS_TOKEN}`,
+          "Content-Type": "application/json",
         },
       }
     );
@@ -31,8 +31,11 @@ router.get("/notifications", async (req, res) => {
 
     notifications.sort((a, b) => {
 
-      if (priorityMap[b.Type] !== priorityMap[a.Type]) {
-        return priorityMap[b.Type] - priorityMap[a.Type];
+      const priorityA = priorityMap[a.Type] || 0;
+      const priorityB = priorityMap[b.Type] || 0;
+
+      if (priorityB !== priorityA) {
+        return priorityB - priorityA;
       }
 
       return new Date(b.Timestamp) - new Date(a.Timestamp);
@@ -43,19 +46,25 @@ router.get("/notifications", async (req, res) => {
 
     await Log("notifications fetched successfully");
 
-    res.json({
-      total: topNotifications.length,
+    res.status(200).json({
+      totalNotifications: topNotifications.length,
       notifications: topNotifications,
     });
 
   } catch (err) {
 
+    console.log("NOTIFICATION ERROR:");
     console.log(err.response?.data || err.message);
 
+    await Log(`notification api failed: ${err.message}`)
+      .catch(() => {});
+
     res.status(500).json({
-      error: err.message,
+      error: "Internal Server Error",
+      message: err.message,
     });
   }
 });
 
 module.exports = router;
+
